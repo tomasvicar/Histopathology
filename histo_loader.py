@@ -2,138 +2,81 @@ import numpy as np
 from torch.utils import data
 import torch
 import os
-from  skimage.io import imread
-import augmenter
+from utils.gdal_fcns import *
 
-import matplotlib.pyplot as plt
-import time
 
 
 class HistoDataset(data.Dataset):
-    def __init__(self, split,path_to_data,s1=0,s2=0,s3=0,s1m=0,s2m=0,s3m=0,cn='no'):
+    def __init__(self, split='train',path_to_data='',level=0,get_mask=1,patch_size=256):
         self.split=split
-        self.s1=s1
-        self.s2=s2
-        self.s3=s3
-        self.s1m=s1m
-        self.s2m=s2m
-        self.s3m=s3m
-        self.cn=cn
+        self.path_to_data=path_to_data
+        self.level=level
+        self.get_mask=get_mask
+        self.patch_size=patch_size
+
        
 
-        self.folder_path=[]
-        for k in range(len(path_to_data)):
-            self.folder_path.append(os.path.join(path_to_data[k],split))
+        self.folder_path=os.path.join(path_to_data,split)
         
         
         
         
-        self.file_names=[]
+        self.file_names_normal=[]
+        self.file_names_tumor=[]
         for k in self.folder_path:
             for root, dirs, files in os.walk(k):
                 for name in files:
-                    if name.endswith(".tif") and name.startswith("data_1_"):
+                    if name.endswith(".tif") and name.startswith("normal"):
                         self.file_names.append(os.path.join(root,name))
-                    
-        self.num_of_img=len(self.file_names)
+                    if name.endswith(".tif") and name.startswith("tumor"):
+                        self.file_names.append(os.path.join(root,name))
+         
+        self.num_of_normal_imgs=len(self.file_names_normal)
+        self.num_of_tumor_imgs=len(self.file_names_tumor)
+        
+            
+        if self.split=='train':
+            self.num_of_imgs=10000
+        else:
+            self.num_of_imgs=5000
 
     def __len__(self):
-        return self.num_of_img
+        return self.num_of_imgs
 
 
 
     def __getitem__(self, index):
         
-        name=self.file_names[index]
+        if not self.split=='train':
+            state=np.random.get_state()
+            np.random.seed(index)
+            
         
-        name_s1=name
-        name_s2=name.replace('data_1_','data_2_')
-        name_s3=name.replace('data_2_','data_3_')
+        lbl=np.random.randint(0,2)
         
-        name_s1m=name.replace('data_1_','mask_1_')
-        name_s2m=name.replace('data_2_','mask_2_')
-        name_s3m=name.replace('data_3_','mask_3_')
-        
-        lbl=int(name[name.rfind('data_1_')+1+6:name.rfind('data_1_')+2+6])
-        
-        
-        data_im=[]
-        data_mask=[]
-        if self.s1:
-            data_im.append(imread(name_s1))
-        if self.s2:
-            data_im.append(imread(name_s2))
-        if self.s3:
-            data_im.append(imread(name_s3))
-        if self.s1m:
-            data_mask.append(imread(name_s1m)>0)
-        if self.s2m:
-            data_mask.append(imread(name_s2m)>0)
-        if self.s3m:
-            data_mask.append(imread(name_s3m)>0)
-            
-            
-
-            
-        augmenters=[]
-#        
-#        
-#        
-#        plt.figure()
-#        plt.imshow(data_im[0])
-#        plt.show()
-        
-        augmenters.append(augmenter.ToFloat())
-        augmenters.append(augmenter.RangeToRange((0,255),(0,1)))
-    
-        if self.split=='train':
-            
-            augmenters.append(augmenter.Rot90Flip())
-            
-            
-#            if np.random.rand()>0.1:
-#                augmenters.append(augmenter.HSVColorAugmenter(dh=0.01,ds=0.1,dv=0,mh=0,ms=0,mv=0))
-#                augmenters.append(augmenter.ClipByValues((0,1)))
-#                augmenters.append(augmenter.BrithnessContrastAugmenter(add=0.1,multipy=0.1))
-#                augmenters.append(augmenter.ClipByValues((0,1)))
-#                augmenters.append(augmenter.RGBColorAugmenter(dr=0.1,dg=0.1,db=0.1,mr=0.1,mg=0.1,mb=0.1,gr=0.1,gg=0.1,gb=0.1))
-#                augmenters.append(augmenter.ClipByValues((0,1)))
-                
-#                augmenters.append(augmenter.BlurSharpAugmenter((-0.1,0.1)))
-#                augmenters.append(augmenter.ElasticDeformer(np.shape(data_im[0])[:-1],grid_r=(5,10),mag_r=5))
-                
-            augmenters.append(augmenter.RandomCrop(in_size=256,out_size=246))
-            
-            
+        if lbl:
+            img_index=np.random.randint(self.num_of_tumor_imgs)
+            img_name=self.file_names_tumor[img_index]
         else:
-            augmenters.append(augmenter.CenterCrop(in_size=256,out_size=246))
+            img_index=np.random.randint(self.num_of_nromal_imgs)
+            img_name=self.file_names_normal[img_index]
             
+        center_position=self.get_pixel_position(img_name,lbl) 
+        position=(int(center_position[0]-patch_size/2), int(center_position[1]-patch_size/2), int(patch_size), int(patch_size))
+        
+        img=imread_gdal(name,level=self.level,position=position)
+        if get_mask:
+            mask=imread_gdal(name,level=self.level,position=position)
             
-        augmenters.append(augmenter.RangeToRange((0,1),(-1,1)))
-        augmenters.append(augmenter.TorchFormat())
-
         
-
+        if not self.split=='train':
+            np.random.set_state(state)
         
-        data_im,data_mask=augmenter.augment_all(augmenters,data_im,data_mask)
-
-
-
-
-        data_im=torch.cat(data_im,dim=0)
-        if len(data_mask)>0:
-            data_mask=data_mask[0]
-
-
-#        plt.figure()
-#        plt.imshow(data_im[0])
-#        plt.show()
-#        a=ffdfsdf
-#        
-        return data_im,data_mask,lbl
+        return img,mask,lbl
         
         
-        
+     def get_pixel_position(self,img_name,lbl):
+         pass
         
         
         
