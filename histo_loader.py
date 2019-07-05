@@ -23,13 +23,12 @@ class HistoDataset(data.Dataset):
         
         self.file_names_normal=[]
         self.file_names_tumor=[]
-        for k in self.folder_path:
-            for root, dirs, files in os.walk(k):
-                for name in files:
-                    if name.endswith(".tif") and name.startswith("normal"):
-                        self.file_names.append(os.path.join(root,name))
-                    if name.endswith(".tif") and name.startswith("tumor"):
-                        self.file_names.append(os.path.join(root,name))
+        for root, dirs, files in os.walk(folder_path):
+            for name in files:
+                if name.endswith(".tif") and name.startswith("normal"):
+                    self.file_names_normal.append(os.path.join(root,name))
+                if name.endswith(".tif") and name.startswith("tumor"):
+                    self.file_names_tumor.append(os.path.join(root,name))
          
         self.num_of_normal_imgs=len(self.file_names_normal)
         self.num_of_tumor_imgs=len(self.file_names_tumor)

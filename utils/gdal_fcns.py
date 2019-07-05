@@ -1,5 +1,6 @@
 import gdal
 import numpy as np
+from utils.gdal_fcns import *
 
 
 def imread_gdal(name,level=0,position=None):
