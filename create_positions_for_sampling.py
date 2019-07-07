@@ -23,7 +23,8 @@ border_to_clear=(2+int(np.ceil(patch_size_max/2/lbl_to_img_scale)))
 num_of_idx_in_one_file=100_000
 
 
-path_to_data='/media/ubmi/DATA2/vicar/cam_dataset/train/data'
+#path_to_data='/media/ubmi/DATA2/vicar/cam_dataset/train/data'
+path_to_data='/media/ubmi/DATA2/vicar/cam_dataset/valid/data'
 
 dataset='cam'
 #dataset='lungs'

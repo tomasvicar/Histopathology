@@ -35,7 +35,7 @@ class HistoDataset(data.Dataset):
         if self.split=='train':
             self.num_of_imgs=10000
         else:
-            self.num_of_imgs=5000
+            self.num_of_imgs=2000
 
     def __len__(self):
         return self.num_of_imgs
@@ -43,20 +43,28 @@ class HistoDataset(data.Dataset):
 
 
     def __getitem__(self, index):
-        
+#        
         if not self.split=='train':
-            state=np.random.get_state()
             np.random.seed(index)
-            print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+#            print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
             
-        
-        lbl=np.random.randint(0,2)
+        if not self.split=='train':
+            lbl=np.random.randint(0,2)
+        else:
+            lbl=torch.randint(2,(1,1)).view(-1).numpy()
+#        print(lbl)
         
         if lbl:
-            img_index=np.random.randint(self.num_of_tumor_imgs)
+            if not self.split=='train':
+                img_index=np.random.randint(self.num_of_tumor_imgs)
+            else:
+                img_index=int(torch.randint(self.num_of_tumor_imgs,(1,1)).view(-1).numpy())
             img_name=self.file_names_tumor[img_index]
         else:
-            img_index=np.random.randint(self.num_of_normal_imgs)
+            if not self.split=='train':
+                img_index=np.random.randint(self.num_of_normal_imgs)
+            else:
+                img_index=int(torch.randint(self.num_of_normal_imgs,(1,1)).view(-1).numpy())
             img_name=self.file_names_normal[img_index]
             
         mask_name=img_name.replace('/data/','/mask/').replace('.tif','_mask.tif')
@@ -82,15 +90,18 @@ class HistoDataset(data.Dataset):
             
         augmenters=[]    
         augmenters.append(augmenter.ToFloat())
-        augmenters.append(augmenter.RangeToRange((0,255),(0,1)))
+        augmenters.append(augmenter.RangeToRange((0,255),(-1,1)))
+        if self.split=='train':
+            augmenters.append(augmenter.Rot90Flip())
         augmenters.append(augmenter.TorchFormat())
         
         img,mask=augmenter.augment_all(augmenters,[img],[mask])
         img,mask=img[0],mask[0]
             
         
-        if not self.split=='train':
-            np.random.set_state(state)
+
+            
+        lbl=torch.from_numpy(np.array(np.float32(lbl)))
         
         return img,mask,lbl
         
@@ -107,7 +118,10 @@ class HistoDataset(data.Dataset):
         else:
             position_num=info.get('position_tisue_num')
         
-        idx_num=np.random.randint(0,position_num)
+        if not self.split=='train':
+            idx_num=np.random.randint(0,position_num)
+        else:
+            idx_num=torch.randint(position_num,(1,1)).view(-1).numpy()
         
         file_num= int(np.floor(idx_num/num_of_idx_in_one_file) )
         idx_in_file=idx_num%num_of_idx_in_one_file
@@ -124,7 +138,14 @@ class HistoDataset(data.Dataset):
         
 #        print(2**(use_lvl-lvl))
         
-        position=[position[0]*2**(use_lvl-lvl)+np.random.randint(2**(use_lvl-lvl)),position[1]*2**(use_lvl-lvl)+np.random.randint(2**(use_lvl-lvl))]
+        if not self.split=='train':
+            rx=np.random.randint(2**(use_lvl-lvl))
+            ry=np.random.randint(2**(use_lvl-lvl))
+        else:
+            rx=int(torch.randint(2**(use_lvl-lvl),(1,1)).view(-1).numpy())
+            ry=int(torch.randint(2**(use_lvl-lvl),(1,1)).view(-1).numpy())
+        
+        position=[position[0]*2**(use_lvl-lvl)+rx,position[1]*2**(use_lvl-lvl)+ry]
             
         return position           
         
