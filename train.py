@@ -4,321 +4,176 @@ import torch
 import torchvision
 import matplotlib.pyplot as plt
 import numpy as np
-from torch import optim
-import torch.nn as nn
-
-from torch.autograd import Variable
-import unet
-import dense_net_pixel246_two_layers as pixel_net
-
-
-import visdom     #python -m visdom.server
-viz=visdom.Visdom()
-
-import drawloss
 import time
 import os
+import pixel_net_eq256_kplus as pixel_net
 import torch.nn.functional as F
+from torch import optim
+from utils.training_function import l1_loss,l2_loss,dice_loss_logit,AdjustLearningRate
+#import torch.multiprocessing as mp
+#mp.set_start_method('spawn') 
 
 
 
-def dice_loss_logit(pred, target):
-  
-    pred=torch.sigmoid(pred)
-    smooth = 1.
+iters=9999999
+batch=16
+init_lr=0.001
+path_to_data_train='/media/ubmi/DATA2/vicar/cam_dataset/train/data'
+path_to_data_valid='/media/ubmi/DATA2/vicar/cam_dataset/valid/data'
+k0=16
+k=8
+gconv=0
+lvl=1
 
-    iflat = pred.contiguous().view(-1)
-    tflat = target.contiguous().view(-1)
-    intersection = (iflat * tflat).sum()
-
-    A_sum = torch.sum(iflat)
-    B_sum = torch.sum(tflat)
-    
-    return 1 - ((2. * intersection + smooth) / (A_sum + B_sum + smooth) )
+save_dir='../results/s1_pixel_baseinfsampler'
 
 
-
-
-
-class AdjustLearningRate():
-    def __init__(self,lr_step,batch):
-        self.lr_step=lr_step
-        self.batch=batch
-        self.best_loss=999999999
-        self.best_loss_pos=0
-        self.stopcount=0
-        
-    def step(self,optimizer,iteration,loss):
-
-        try:
-            with open('lr_change.txt', 'r') as f:
-                x = f.readlines()
-                lr=float(x[0])
-            time.sleep(1)
-            os.remove('lr_change.txt')
-            
-            print('lr was set to: ' + str(x))
-            for param_group in optimizer.param_groups:
-                param_group['lr'] = lr
-        except:
-            pass
-        
-        if  loss<self.best_loss:
-            self.best_loss_pos=iteration*batch
-            self.best_loss=loss
-        
-        print(self.best_loss,loss)
-        
-        print(str(self.batch*iteration-self.best_loss_pos) + '////' + str(self.lr_step))
-        if self.batch*iteration-self.best_loss_pos>self.lr_step:
-            self.stopcount+=1
-            self.best_loss_pos=iteration*batch
-            self.best_loss=loss
-            print('lr down')
-            for param_group in optimizer.param_groups:
-                param_group['lr'] = param_group['lr'] *0.5
-                
-        if  self.stopcount>=6:
-            return 1
-        else:
-            return 0
-                
-                
-
-def adjust_hard_negative(hard_negative,iteration,hard_neg_step):
-    try:
-        with open('hn_change.txt', 'r') as f:
-            x = f.readlines()
-            lr=float(x[0])
-        time.sleep(1)
-        os.remove('hn_change.txt')
-        
-        print('lr was set to: ' + str(x))
-        hard_negative=lr
-    except:
-        pass
-        
-    if iteration%hard_neg_step==0 and iteration!=0:
-        hard_negative=hard_negative+0.2
-        
-    return hard_negative
+try:
+    os.makedirs(save_dir)
+except:
+    pass
 
 
 
-
-
+#def worker_init_fn(worker_id):                                                          
+#    np.random.seed(np.random.get_state()[1][0] + worker_id)
 
 
 
 
 if __name__ == '__main__':
 
-
-
-
     
+        
+    loader = HistoDataset(split='train',path_to_data=path_to_data_train,level=lvl)
+    trainloader= data.DataLoader(loader, batch_size=batch, num_workers=3, shuffle=True,drop_last=True,pin_memory=False,worker_init_fn=None)
     
+    loader = HistoDataset(split='valid',path_to_data=path_to_data_valid,level=lvl)
+    validloader= data.DataLoader(loader, batch_size=batch, num_workers=3, shuffle=False,drop_last=False,pin_memory=False)
     
+    def inf_train_gen():
+        while True:
+#            np.random.seed()
+            for img,mask,lbl in trainloader:
+                yield img,mask,lbl
+                
+    gen = inf_train_gen()
     
-    
-    
-    #16batch,20000it = 32000
-    ##lr_step - ->auto
-    iterace=99999999999999999
-    lr_step=150000
-    init_lr = 0.001
-    hard_neg_step=iterace
-    batch = 16 #64/16
-#    k0=2*3#4
-#    k=4*4
-    
-    k0=2
-    k=3
-    gconv=1
-    
-    cn='no'
-    model_name='s1_dense_net_preatrained'
-    net='P'
-    
-    path_to_data=['E:/histolky_drazdany_data/lungs/patches']
-    save_dir='../results'
-    
-    
-    
-    input_layers=3
-    
-    s1=1
-    s2=0
-    s3=0
-    s1m=0
-    s2m=0
-    s3m=0
-    
-    
-    
-    try:
-        os.makedirs(save_dir + '/'+ model_name+  '/models')
-    except:
-        pass
-    
-    
-    
-    
-    
-    
-    
-    loader = HistoDataset(split='train',path_to_data=path_to_data,s1=s1,s2=s2,s3=s3,s1m=s1m,s2m=s2m,s3m=s3m,cn=cn)
-    trainloader= data.DataLoader(loader, batch_size=batch, num_workers=0, shuffle=True,drop_last=True,pin_memory=False)
-    
-    loader = HistoDataset(split='valid',path_to_data=path_to_data,s1=s1,s2=s2,s3=s3,s1m=s1m,s2m=s2m,s3m=s3m,cn=cn)
-    validloader= data.DataLoader(loader, batch_size=batch, num_workers=0, shuffle=False,drop_last=False,pin_memory=False)
-    
-    
-    
-    hard_negative=0
-    
-    stop=0
-    
-#    
-#    if net=='U':
-#        model=unet.Unet(feature_scale=8,input_size=input_layers)
-#    if net=='P':
-#        model=pixel_net.PixelNet(k0=k0,k=k,input_size=input_layers,gconv=gconv)
-    
-    model=torch.load('s1_450t_long_0.9946045499999998__043500.pkl')
-    
-    model=model.cuda()
+    model=pixel_net.PixelNet(K=k0,kplus=k,input_size=3,gconv=gconv)
+    model=model.cuda(0)
     
     optimizer = optim.Adam(model.parameters(),lr = init_lr ,betas= (0.9, 0.999),eps=1e-8,weight_decay=1e-8)
     
-    display_losses= drawloss.DisplayLosses(evaluate_it=25)
-    
-    
-    
-    lrad=AdjustLearningRate(lr_step,batch)
-    
-    valid_loss=999999999
-    
-    itt=-1
-    while itt<iterace and stop==0:
-        for it,(img,mask,lbl) in enumerate(trainloader):
-            itt+=1
-    
-    #        img=torch.cat(img,dim=1)
-    #        img=img[0]
-            if net == 'U': 
-                lbl=mask
-            
-            
-#            img=img.data.pin_memory()
-            
-            hard_negative=adjust_hard_negative(hard_negative,itt,hard_neg_step)
-            
-    
-            model.train()
-            
-            img = Variable(img.cuda(0))
-            lbl = Variable(lbl.cuda(0))
-            
-            output=model(img)
-            
-            
-            optimizer.zero_grad()
-            
-    
-            if net == 'U':      
-                loss = dice_loss_logit(output,lbl.float())
+    it=0
+    stop=0
+    loss_train=[]
+    acc_train=[]
+    it_train=[]
+    loss_valid=[]
+    acc_valid=[]
+    it_valid=[]
+    losses=[]
+    accs=[]
+    while it<iters and stop==0:
+        it=it+1
+#        print(it)
+        
+        img,mask,lbl=next(gen)
+        
+        img=img.cuda(0)
+        mask=mask.cuda(0)
+        lbl=lbl.cuda(0)
+        
+        img.requires_grad=True
+        mask.requires_grad=True
                 
-               
-    #            w=8.327-1 ##lungs
-    #            loss = F.binary_cross_entropy_with_logits(output,lbl.float(),weight=((lbl.float()*w)+1))  
-                    
-            if net == 'P':
-                loss = F.binary_cross_entropy_with_logits(output.squeeze(),lbl.float())
-            
-    
-            loss.backward()
-            optimizer.step()
-            
-            clasif=torch.sigmoid(output)
-            
-            if net=='U':
-                lbl=lbl[...,159,159]
-                clasif=clasif[...,159,159]
-            
-            loss=loss.data.cpu().numpy()
-            lbl=lbl.data.cpu().numpy()
-            clasif=clasif.data.cpu().numpy()
-            
-            
-            display_losses.update_train(loss,lbl,clasif,optimizer.param_groups[0]['lr'])
-            
-    
-            
-            if itt%1000==0:
-                val_it=0
-                for itv,(img,mask,lbl) in enumerate(validloader):
-                    print(itv)
-                    val_it+=1
-                    
-                    
-#                    img=img.data.pin_memory()
-                    
-    #                img=torch.cat(img,dim=1)
-    #                img=img[0]
-                    if net == 'U': 
-                        lbl=mask
-                    
-    
-                    model.eval()
-                    
-                    
-                    
-                    img = Variable(img.cuda(0))
-    
-                    lbl = Variable(lbl.cuda(0))
-                          
-                    
-                    output=model(img)
-                    
-                    if net == 'U':      
-                        loss = dice_loss_logit(output,lbl.float())
-    
-    
-    #                    w=8.327-1##lungs - now you should measure
-    #                    loss = F.binary_cross_entropy_with_logits(output,lbl.float(),weight=((lbl.float()*w)+1))  
-                            
-                            
-                    if net == 'P':
-                        loss = F.binary_cross_entropy_with_logits(output.squeeze(),lbl.float())
-            
-                    clasif=torch.sigmoid(output)
-                    
-                    if net=='U':
-                        lbl=lbl[...,159,159]
-                        clasif=clasif[...,159,159]
-    
-                    loss=loss.data.cpu().numpy()
-                    lbl=lbl.data.cpu().numpy()
-                    clasif=clasif.data.cpu().numpy()
-                    
-                    display_losses.update_test(loss,lbl,clasif)
-                    
-    
-    
-                display_losses.draw_test()
+        model.train()
+
+        output=model(img)
+        
+        loss = F.binary_cross_entropy_with_logits(output.squeeze(),lbl.squeeze())
+        
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        
+        clasif=torch.sigmoid(output)
+        
+        lbl=lbl.view(-1).detach().cpu().numpy()
+        clasif=clasif.view(-1).detach().cpu().numpy()
+        acc=np.sum(lbl==(clasif>0.5))/clasif.shape[0]
                 
-                stop=lrad.step(optimizer,itt,display_losses.get_loss_test_last())
-                
-                torch.save(model,save_dir + '/' +model_name+ '/models/' +model_name  +'_' + str(display_losses.get_auc_test_last())+ '__' + str(itt).zfill(6)+'.pkl')
-                
-                display_losses.save_plots(save_dir + '/' +model_name)
+        loss=loss.detach().cpu().numpy()
+        losses.append(loss)
+        accs.append(acc)
             
-                tr,te=display_losses.get_data()
-                
-                np.save(save_dir + '/' +model_name +'/training_log_train.npy', tr)
-                np.save(save_dir + '/' +model_name +'/training_log_test.npy', te)
+        
+        if it % 300 == 0:
             
+            loss_train.append(np.mean(losses))
+            acc_train.append(np.mean(accs))
+            it_train.append(it)
+            
+            losses=[]
+            accs=[]
+            for itt,(img,mask,lbl) in enumerate(validloader):
+                img=img.cuda(0)
+                mask=mask.cuda(0)
+                lbl=lbl.cuda(0)
+                
+                model.eval()
+
+                output=model(img)
+                
+                loss = F.binary_cross_entropy_with_logits(output.squeeze(),lbl.squeeze())
+                
+                clasif=torch.sigmoid(output)
+                
+                lbl=lbl.view(-1).detach().cpu().numpy()
+                clasif=clasif.view(-1).detach().cpu().numpy()
+                acc=np.sum(lbl==(clasif>0.5))/clasif.shape[0]
+
+                loss=loss.detach().cpu().numpy()
+                losses.append(loss)
+                accs.append(acc)
+                
+            loss_valid.append(np.mean(losses))
+            acc_valid.append(np.mean(accs))
+            it_valid.append(it)
+            
+            losses=[]
+            accs=[]
+            
+            torch.save(model,save_dir + '/'+ str(acc_valid[-1])+ '__' + str(it).zfill(8)+'.pkl')
+            
+            np.savez(save_dir +'/training_log_train.npy', np.array(it_train),np.array(it_valid),np.array(loss_train),np.array(loss_valid))
+            np.savez(save_dir +'/training_log_test.npy', np.array(it_train),np.array(it_valid),np.array(acc_train),np.array(acc_valid))
+            
+            
+            for param_group in optimizer.param_groups:
+                lr_act=param_group['lr']
+            
+            print(str(it) + ' train loss: ' + str(loss_train[-1]) +  '  train ACC: ' +str(acc_train[-1])
+            + ' test loss: ' + str(loss_valid[-1]) +  '  test ACC: ' +str(acc_valid[-1]) + '  lr: ' +str(lr_act))
+            
+            plt.plot(it_train,loss_train)
+            plt.plot(it_valid,loss_valid)
+            plt.show()
+            
+            plt.plot(it_train,acc_train)
+            plt.plot(it_valid,acc_valid)
+            plt.show()
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
        
-            
-            

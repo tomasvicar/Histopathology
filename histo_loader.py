@@ -78,7 +78,7 @@ class HistoDataset(data.Dataset):
         position=(int(center_position[0]-self.patch_size/2), int(center_position[1]-self.patch_size/2),
                   int(self.patch_size), int(self.patch_size))
         
-        print(position)
+#        print(position)
         
         img=imread_gdal(img_name,level=self.level,position=position)
         if self.get_mask:
