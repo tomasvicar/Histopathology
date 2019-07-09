@@ -12,6 +12,7 @@ class HistoDataset(data.Dataset):
     def __init__(self, split='train',path_to_data='',level=0,get_mask=1,patch_size=256):
         self.split=split
         self.path_to_data=path_to_data
+
         self.level=level
         self.get_mask=get_mask
         self.patch_size=patch_size

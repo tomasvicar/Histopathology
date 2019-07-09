@@ -1,6 +1,18 @@
 import gdal
 import numpy as np
-from utils.gdal_fcns import *
+
+
+def getsize_gdal(name,level=0):
+    level=level-1
+
+    gdalObj = gdal.Open(name)
+    
+    Overview = gdalObj.GetRasterBand(1)
+    if level>=0:
+        Overview = Overview.GetOverview(level)
+        
+    return (Overview.XSize, Overview.YSize)
+
 
 
 def imread_gdal(name,level=0,position=None):
@@ -28,14 +40,14 @@ def imread_gdal(name,level=0,position=None):
         
     img = np.zeros((position[3], position[2], nBands), dtype=np.uint8)
     
-    img[:,:,0] = Overview.ReadAsArray(position[0], position[1],position[2],position[3])
+    img[:,:,0] = Overview.ReadAsArray(int(position[0]), int(position[1]),int(position[2]),int(position[3]))
     
     for k in range(2,nBands+1):
         Overview = gdalObj.GetRasterBand(k)
         if level>=0:
             Overview = Overview.GetOverview(level)
         
-        img[:,:,k-1] = Overview.ReadAsArray(position[0], position[1],position[2],position[3])
+        img[:,:,k-1] = Overview.ReadAsArray(int(position[0]), int(position[1]),int(position[2]),int(position[3]))
         
     
     return np.squeeze(img)

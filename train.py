@@ -23,9 +23,9 @@ path_to_data_valid='/media/ubmi/DATA2/vicar/cam_dataset/valid/data'
 k0=16
 k=8
 gconv=0
-lvl=1
+lvl=2
 
-save_dir='../results/s1_pixel_baseinfsampler'
+save_dir='../results/s2_pixel_baseinfsampler'
 
 
 try:
@@ -37,6 +37,7 @@ except:
 
 #def worker_init_fn(worker_id):                                                          
 #    np.random.seed(np.random.get_state()[1][0] + worker_id)
+    
 
 
 
@@ -84,6 +85,10 @@ if __name__ == '__main__':
         mask=mask.cuda(0)
         lbl=lbl.cuda(0)
         
+#        print(lbl[0])
+#        plt.imshow(np.concatenate((img[0,0,:,:].data.cpu().numpy(),mask[0,0,:,:].data.cpu().numpy()),axis=1))
+#        plt.show()
+#        
         img.requires_grad=True
         mask.requires_grad=True
                 

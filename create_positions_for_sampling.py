@@ -3,6 +3,7 @@ import os
 from skimage.io import imread
 from utils.gdal_fcns import imread_gdal
 import cv2
+import matplotlib.pyplot as plt
 
 def clear_border(maskin,n):
     maskout=maskin
@@ -23,8 +24,8 @@ border_to_clear=(2+int(np.ceil(patch_size_max/2/lbl_to_img_scale)))
 num_of_idx_in_one_file=100_000
 
 
-#path_to_data='/media/ubmi/DATA2/vicar/cam_dataset/train/data'
-path_to_data='/media/ubmi/DATA2/vicar/cam_dataset/valid/data'
+path_to_data='/media/ubmi/DATA2/vicar/cam_dataset/train/data'
+#path_to_data='/media/ubmi/DATA2/vicar/cam_dataset/valid/data'
 
 dataset='cam'
 #dataset='lungs'
@@ -72,7 +73,7 @@ for k,file_name in enumerate(file_names):
         
     lbl=lbl[:np.min([np.shape(lbl)[0],np.shape(fg)[0]]),:np.min([np.shape(lbl)[1],np.shape(fg)[1]])]
     
-
+    
     
     tisue=np.bitwise_and(fg>0,lbl==0)
     if dataset=='lungs':
@@ -82,11 +83,21 @@ for k,file_name in enumerate(file_names):
     position_tisue_num=len(position_tisue[0])
     
     
-    
     tumor=lbl>0
     tumor=clear_border(tumor,border_to_clear)
     position_tumor=np.where(tumor>0)
     position_tumor_num=len(position_tumor[0])
+    
+#    plt.imshow(tisue)
+#    plt.show()
+#    plt.imshow(fg)
+#    plt.show()
+#    plt.imshow(lbl)
+#    plt.show()
+#    plt.imshow(tumor)
+#    plt.show()
+    
+    
     
     info= dict(fg_lvl=fg_lvl,use_lvl=use_lvl,patch_size_max=patch_size_max,
                     lbl_to_img_scale=lbl_to_img_scale,
@@ -106,19 +117,21 @@ for k,file_name in enumerate(file_names):
     
     num_of_files=int(np.ceil(position_tisue_num/num_of_idx_in_one_file))
     for kk in range(num_of_files):
+        kkk=kk*num_of_idx_in_one_file
         if kk==num_of_files-1:
-            tmp=[position_tisue[0][kk:kk+num_of_idx_in_one_file].astype(np.int32),position_tisue[1][kk:kk+num_of_idx_in_one_file].astype(np.int32)]
+            tmp=[position_tisue[0][kkk:].astype(np.int32),position_tisue[1][kk:kk+num_of_idx_in_one_file].astype(np.int32)]
         else:
-            tmp=[position_tisue[0][kk:kk+num_of_idx_in_one_file].astype(np.int32),position_tisue[1][kk:kk+num_of_idx_in_one_file].astype(np.int32)]
+            tmp=[position_tisue[0][kkk:kkk+num_of_idx_in_one_file].astype(np.int32),position_tisue[1][kk:kk+num_of_idx_in_one_file].astype(np.int32)]
 #        np.save(save_folder + '/' + 'idxs_tisue_'+ str(kk).zfill(6) +'.npy',tmp,allow_pickle=True)
         np.savez_compressed(save_folder + '/' + 'idxs_tisue_'+ str(kk).zfill(6) +'.npz',tmp,allow_pickle=True)
         
     num_of_files=int(np.ceil(position_tumor_num/num_of_idx_in_one_file))
     for kk in range(num_of_files):
+        kkk=kk*num_of_idx_in_one_file
         if kk==num_of_files-1:
-            tmp=[position_tumor[0][kk:kk+num_of_idx_in_one_file].astype(np.int32),position_tumor[1][kk:kk+num_of_idx_in_one_file].astype(np.int32)]
+            tmp=[position_tumor[0][kkk:].astype(np.int32),position_tumor[1][kk:kk+num_of_idx_in_one_file].astype(np.int32)]
         else:
-            tmp=[position_tumor[0][kk:kk+num_of_idx_in_one_file].astype(np.int32),position_tumor[1][kk:kk+num_of_idx_in_one_file].astype(np.int32)]
+            tmp=[position_tumor[0][kkk:kkk+num_of_idx_in_one_file].astype(np.int32),position_tumor[1][kk:kk+num_of_idx_in_one_file].astype(np.int32)]
 #        np.save(save_folder + '/' + 'idxs_tumor_'+ str(kk).zfill(6) +'.npy',tmp,allow_pickle=True)   
         np.savez_compressed(save_folder + '/' + 'idxs_tumor_'+ str(kk).zfill(6) +'.npz',tmp,allow_pickle=True)  
         
