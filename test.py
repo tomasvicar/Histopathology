@@ -17,31 +17,31 @@ import pixel_net_eq256_kplus as pixel_net
 
 
 results_path='/media/ubmi/DATA1/vicar/code/results/s2_pixel_baseinfsampler'
-model='0.9895__00145200.pkl'
+model='0.801__00025200.pkl'
 
 
-#data_path='/media/ubmi/DATA2/vicar/cam_dataset/test/data' 
-data_path='/media/ubmi/DATA2/vicar/cam_dataset/train/data' 
+data_path='/media/ubmi/DATA2/vicar/cam_dataset/test/data' 
+#data_path='/media/ubmi/DATA2/vicar/cam_dataset/train/data' 
 
 
 
-lvl=1###based on network input scale
+lvl=2###based on network input scale
 fg_lvl=4 ##vased on fg mask scale
 
-dense_down=4 
-fg_lbl_lvl_get=5
-write_lvl=5
+dense_down=4
+fg_lbl_lvl_get=6
+write_lvl=6
 
 step=256*8
 border=120 #(net_orig_input_size-2**num_of_pools)/2
 
-lvl_control=5
+lvl_control=6
 
 
 
 
-model_path=results_path+ '/' + model
-save_folder=results_path +'/results'
+model_path=results_path+ os.sep + model
+save_folder=results_path +os.sep+'results'
 
 try:
     os.makedirs(save_folder)
@@ -57,10 +57,10 @@ file_names=[]
 for root, dirs, files in os.walk(data_path):
     for name in files:
         if name.endswith(".tif"):
-            file_names.append(root+'/'+name)
+            file_names.append(root+os.sep+name)
     
       
-file_names=file_names[53:]
+file_names=file_names[13:]
 #file_names = [file_names[i] for i in [1,6]]
 
 model= torch.load(model_path)
@@ -72,18 +72,18 @@ model.eval()
 
 
 for ii,img_filename in enumerate(file_names):
-    print(str(ii) +'/'+ str(len(file_names)))
+    print(str(ii) +os.sep+ str(len(file_names)))
 
     fg_name=img_filename
-    fg_name=fg_name.replace('/data/','/fg/')
+    fg_name=fg_name.replace(os.sep+'data'+os.sep,os.sep+'fg'+os.sep)
     
     lbl_name=fg_name
-    lbl_name=lbl_name.replace('/fg/','/mask/')
+    lbl_name=lbl_name.replace(os.sep+'fg'+os.sep,os.sep+'mask'+os.sep)
     lbl_name=lbl_name.replace('.tif','_mask.tif')
     
-    tmp=img_filename.split('/')
+    tmp=img_filename.split(os.sep)
     tmp=tmp[-1]
-    save_name=save_folder +'/'+ tmp
+    save_name=save_folder +os.sep+ tmp
     
 
     
@@ -106,8 +106,9 @@ for ii,img_filename in enumerate(file_names):
 
         img0,fg,lbl=patcher.read()
         
-#        plt.imshow(img0[:,:,0])
-#        plt.show()
+        plt.imshow(img0[:,:,0])
+        plt.show()
+        
         
         imgs=[img0]
         
@@ -127,6 +128,9 @@ for ii,img_filename in enumerate(file_names):
         img=torch.sigmoid(img)
         img=img[0,0,:,:].data.cpu().numpy()
 
+        plt.imshow(np.concatenate((fg,img*255,lbl),axis=1))
+        plt.show()
+
         
         img[fg==0]=0
         
@@ -138,9 +142,9 @@ for ii,img_filename in enumerate(file_names):
 
         img_size=img_size+np.sum(fg>0)
         
-        
 
-        patcher.write(img)
+
+        patcher.write(img*255)
         
     img_sizes.append(img_size)
     
@@ -168,7 +172,7 @@ for ii,img_filename in enumerate(file_names):
         lbl=imread_gdal(lbl_name,lvl_control)>0
     else:
         lbl=np.zeros(np.shape(img)[:-1])>0
-    res=imread_gdal(save_name,lvl_control-write_lvl)
+    res=imread_gdal(save_name,lvl_control-write_lvl,dtype=np.float32)
     x=np.min((np.shape(img)[0],np.shape(res)[0]))
     y=np.min((np.shape(img)[1],np.shape(res)[1]))
        
@@ -178,11 +182,11 @@ for ii,img_filename in enumerate(file_names):
     
     img=img_with_cont(img,lbl,(255,0,0),2)
     green=np.stack((np.zeros(np.shape(res)),np.ones(np.shape(res)),np.zeros(np.shape(res))),axis=2)
-    composite=img+green*np.repeat(np.expand_dims(res*255,axis=2),3,axis=2)
+    composite=img+green*np.repeat(np.expand_dims(res,axis=2),3,axis=2)
     composite[composite>255]=255
     composite=np.round(composite).astype(np.uint8)
     
-    res=img_with_cont(np.repeat(np.expand_dims(res*255,axis=2),3,axis=2),lbl,(255,0,0),2)
+    res=img_with_cont(np.repeat(np.expand_dims(res,axis=2),3,axis=2),lbl,(255,0,0),2)
     
     cotrol_name_res=save_name +'_control1.tiff'
     cotrol_name_img=save_name +'_control2.tiff'

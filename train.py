@@ -23,9 +23,11 @@ path_to_data_valid='/media/ubmi/DATA2/vicar/cam_dataset/valid/data'
 k0=16
 k=8
 gconv=0
-lvl=2
+lvl=1
+valid_freq=300 ##iters
+lr_step=50_000 ##iters
 
-save_dir='../results/s2_pixel_baseinfsampler'
+save_dir='../results/s1_pixel_baseinfsampler'
 
 
 try:
@@ -64,6 +66,7 @@ if __name__ == '__main__':
     model=model.cuda(0)
     
     optimizer = optim.Adam(model.parameters(),lr = init_lr ,betas= (0.9, 0.999),eps=1e-8,weight_decay=1e-8)
+    adjustLerningRate=AdjustLearningRate(lr_step=lr_step,stopcount_limit=7,drop_factor=0.5)
     
     it=0
     stop=0
@@ -113,7 +116,7 @@ if __name__ == '__main__':
         accs.append(acc)
             
         
-        if it % 300 == 0:
+        if it % valid_freq == 0:
             
             loss_train.append(np.mean(losses))
             acc_train.append(np.mean(accs))
@@ -146,13 +149,15 @@ if __name__ == '__main__':
             acc_valid.append(np.mean(accs))
             it_valid.append(it)
             
+            stop=adjustLerningRate.step(optimizer,it,loss_valid[-1])
+            
             losses=[]
             accs=[]
             
-            torch.save(model,save_dir + '/'+ str(acc_valid[-1])+ '__' + str(it).zfill(8)+'.pkl')
+            torch.save(model,save_dir + os.sep + str(acc_valid[-1])+ '__' + str(it).zfill(8)+'.pkl')
             
-            np.savez(save_dir +'/training_log_train.npy', np.array(it_train),np.array(it_valid),np.array(loss_train),np.array(loss_valid))
-            np.savez(save_dir +'/training_log_test.npy', np.array(it_train),np.array(it_valid),np.array(acc_train),np.array(acc_valid))
+            np.savez(save_dir +os.sep+'training_log_train.npy', np.array(it_train),np.array(it_valid),np.array(loss_train),np.array(loss_valid))
+            np.savez(save_dir +os.sep+'training_log_test.npy', np.array(it_train),np.array(it_valid),np.array(acc_train),np.array(acc_valid))
             
             
             for param_group in optimizer.param_groups:

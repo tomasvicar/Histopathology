@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+from torch.nn import init
 
 def maxpool_muj(x,kernel,stride,dil,dense,gconv=0):
     
@@ -184,6 +185,12 @@ class PixelNet(nn.Module):
             
         self.finalc1=nn.Conv2d(K, 32,1)
         self.finalc2=nn.Conv2d(32, 1,1)
+        
+        for i, m in enumerate(self.modules()):
+            if isinstance(m, nn.Conv2d):
+                init.xavier_normal_(m.weight)
+                init.constant_(m.bias, 0)
+        
         
         return
         

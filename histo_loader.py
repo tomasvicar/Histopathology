@@ -68,7 +68,7 @@ class HistoDataset(data.Dataset):
                 img_index=int(torch.randint(self.num_of_normal_imgs,(1,1)).view(-1).numpy())
             img_name=self.file_names_normal[img_index]
             
-        mask_name=img_name.replace('/data/','/mask/').replace('.tif','_mask.tif')
+        mask_name=img_name.replace(os.sep+'data'+os.sep,os.sep+'mask'+os.sep).replace('.tif','_mask.tif')
             
         center_position=self.get_pixel_position(img_name,lbl,self.level) 
         
@@ -108,9 +108,9 @@ class HistoDataset(data.Dataset):
         
         
     def get_pixel_position(self,img_name,lbl,lvl):
-        save_folder=img_name.replace('/data/','/idx/')[:-4]
+        save_folder=img_name.replace(os.sep+'data'+os.sep,os.sep+'idx'+os.sep)[:-4]
    
-        info=np.load(save_folder + '/' + 'info.npy',allow_pickle=True).flat[0]
+        info=np.load(save_folder + os.sep + 'info.npy',allow_pickle=True).flat[0]
         num_of_idx_in_one_file=info.get('num_of_idx_in_one_file')
          
          
@@ -128,9 +128,9 @@ class HistoDataset(data.Dataset):
         idx_in_file=idx_num%num_of_idx_in_one_file
         
         if lbl:
-            positions=np.load(save_folder + '/' + 'idxs_tumor_'+ str(file_num).zfill(6) +'.npz')
+            positions=np.load(save_folder + os.sep + 'idxs_tumor_'+ str(file_num).zfill(6) +'.npz',allow_pickle=True)
         else:
-            positions=np.load(save_folder + '/' + 'idxs_tisue_'+ str(file_num).zfill(6) +'.npz')
+            positions=np.load(save_folder + os.sep + 'idxs_tisue_'+ str(file_num).zfill(6) +'.npz',allow_pickle=True)
             
         positions=positions.f.arr_0
         position=[positions[0][idx_in_file],positions[1][idx_in_file]]

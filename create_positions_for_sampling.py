@@ -24,8 +24,8 @@ border_to_clear=(2+int(np.ceil(patch_size_max/2/lbl_to_img_scale)))
 num_of_idx_in_one_file=100_000
 
 
-path_to_data='/media/ubmi/DATA2/vicar/cam_dataset/train/data'
-#path_to_data='/media/ubmi/DATA2/vicar/cam_dataset/valid/data'
+#path_to_data='/media/ubmi/DATA2/vicar/cam_dataset/train/data'
+path_to_data='/media/ubmi/DATA2/vicar/cam_dataset/valid/data'
 
 dataset='cam'
 #dataset='lungs'
@@ -44,10 +44,10 @@ for k,file_name in enumerate(file_names):
     
     data_name=file_name
     
-    fg_name=file_name.replace('/data/','/fg/')
+    fg_name=file_name.replace(os.sep +'data' + os.sep,os.sep+'fg'+os.sep)
         
         
-    mask_name=file_name.replace('/data/','/mask/')
+    mask_name=file_name.replace(os.sep +'data' + os.sep,os.sep +'mask' + os.sep)
     mask_name=mask_name[:-4]+'_mask.tif'
         
     
@@ -104,14 +104,14 @@ for k,file_name in enumerate(file_names):
                     position_tumor_num=position_tumor_num,
                     position_tisue_num=position_tisue_num,num_of_idx_in_one_file=num_of_idx_in_one_file)
 
-    save_folder=file_name.replace('/data/','/idx/')[:-4]
+    save_folder=file_name.replace(os.sep +'data' + os.sep,os.sep +'idx' + os.sep)[:-4]
     
     try:
         os.makedirs(save_folder)
     except:
         pass
     
-    np.save(save_folder + '/' + 'info.npy',info,allow_pickle=True)
+    np.save(save_folder + os.sep + 'info.npy',info,allow_pickle=True)
     
 #    np:load(FDSF).flat[0]
     
@@ -123,7 +123,7 @@ for k,file_name in enumerate(file_names):
         else:
             tmp=[position_tisue[0][kkk:kkk+num_of_idx_in_one_file].astype(np.int32),position_tisue[1][kk:kk+num_of_idx_in_one_file].astype(np.int32)]
 #        np.save(save_folder + '/' + 'idxs_tisue_'+ str(kk).zfill(6) +'.npy',tmp,allow_pickle=True)
-        np.savez_compressed(save_folder + '/' + 'idxs_tisue_'+ str(kk).zfill(6) +'.npz',tmp,allow_pickle=True)
+        np.savez_compressed(save_folder + os.sep + 'idxs_tisue_'+ str(kk).zfill(6) +'.npz',tmp,allow_pickle=True)
         
     num_of_files=int(np.ceil(position_tumor_num/num_of_idx_in_one_file))
     for kk in range(num_of_files):
@@ -133,7 +133,7 @@ for k,file_name in enumerate(file_names):
         else:
             tmp=[position_tumor[0][kkk:kkk+num_of_idx_in_one_file].astype(np.int32),position_tumor[1][kk:kk+num_of_idx_in_one_file].astype(np.int32)]
 #        np.save(save_folder + '/' + 'idxs_tumor_'+ str(kk).zfill(6) +'.npy',tmp,allow_pickle=True)   
-        np.savez_compressed(save_folder + '/' + 'idxs_tumor_'+ str(kk).zfill(6) +'.npz',tmp,allow_pickle=True)  
+        np.savez_compressed(save_folder + os.sep + 'idxs_tumor_'+ str(kk).zfill(6) +'.npz',tmp,allow_pickle=True)  
         
         
         

@@ -36,11 +36,13 @@ def dice_loss_logit(pred, target):
 
 
 class AdjustLearningRate():
-    def __init__(self,lr_step=10):
-        self.lr_step=lr_step
+    def __init__(self,lr_step=10_000,stopcount_limit=7,drop_factor=0.5):
+        self.lr_step=lr_step##if no improvement
         self.best_loss=999999999
         self.best_loss_pos=0
         self.stopcount=0
+        self.stopcount_limit=stopcount_limit
+        self.drop_factor=drop_factor
         
     def step(self,optimizer,iteration=0,loss=0):
 
@@ -70,9 +72,9 @@ class AdjustLearningRate():
             self.best_loss=loss
             print('lr down')
             for param_group in optimizer.param_groups:
-                param_group['lr'] = param_group['lr'] *0.5
+                param_group['lr'] = param_group['lr'] *self.drop_factor
                 
-        if  self.stopcount>=6:
+        if  self.stopcount>=self.stopcount_limit:
             return 1
         else:
             return 0

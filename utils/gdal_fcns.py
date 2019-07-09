@@ -15,7 +15,7 @@ def getsize_gdal(name,level=0):
 
 
 
-def imread_gdal(name,level=0,position=None):
+def imread_gdal(name,level=0,position=None,dtype=np.uint8):
     
     '''
     
@@ -38,7 +38,7 @@ def imread_gdal(name,level=0,position=None):
         
 #    print(Overview.XSize, Overview.YSize)
         
-    img = np.zeros((position[3], position[2], nBands), dtype=np.uint8)
+    img = np.zeros((position[3], position[2], nBands), dtype=dtype)
     
     img[:,:,0] = Overview.ReadAsArray(int(position[0]), int(position[1]),int(position[2]),int(position[3]))
     

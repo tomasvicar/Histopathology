@@ -46,7 +46,7 @@ class Patcher():
         corners=np.round(np.array(corners)).astype(np.int)
         corners_fg=np.round(np.array(corners)/2**(self.fg_lvl-self.lvl)).astype(np.int)
         step_fg=np.round(step/2**(self.fg_lvl-self.lvl)).astype(np.int)
-        
+        border_fg=np.round(border/2**(self.fg_lvl-self.lvl)).astype(np.int)
         
         fg=imread_gdal(fg_name) ##if fg fits to RAM
         
@@ -56,6 +56,7 @@ class Patcher():
             counter+=1
 #            fg_patch = imread_gdal(fg_name,position=(c[0],c[1],step_fg,step_fg)) ##if fg does not fit to RAM
             fg_patch=fg[c[1]:c[1]+step_fg,c[0]:c[0]+step_fg]
+            fg_patch=fg_patch[border_fg:-border_fg,border_fg:-border_fg]
             if np.sum(fg_patch)==0:
                 use[counter]=0
           
