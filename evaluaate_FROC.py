@@ -14,55 +14,8 @@ from scipy.ndimage.filters import median_filter
 from skimage.morphology import disk,dilation
 from skimage.feature import peak_local_max
 
-def imread_gdal_mask(data_name,level):
-    
-    level=level-1
+from utils.gdal_fcns import imread_gdal,getsize_gdal
 
-    gdalObj = gdal.Open(data_name)
-    
-
-    
-    rOverview = gdalObj.GetRasterBand (1)
-    if level>=0:
-        rOverview = rOverview.GetOverview(level)
-        
-    rOverview = rOverview.ReadAsArray(0,0, rOverview.XSize, rOverview.YSize) 
-    
-    return rOverview
-
-
-def imread_gdal_mask(data_name,level):
-    
-    level=level-1
-
-    gdalObj = gdal.Open(data_name)
-    
-
-    
-    rOverview = gdalObj.GetRasterBand(1)
-    if level>=0:
-        rOverview = rOverview.GetOverview(level)
-        
-    rOverview = rOverview.ReadAsArray(0,0, rOverview.XSize, rOverview.YSize) 
-    
-    return rOverview
-
-
-def imread_gdal_mask_small(data_name,level):
-    
-    level=level-1
-
-    gdalObj = gdal.Open(data_name)
-    
-
-    
-    rOverview = gdalObj.GetRasterBand (1)
-    if level>=0:
-        rOverview = rOverview.GetOverview(level)
-        
-    rOverview = rOverview.ReadAsArray(0,0, int(np.ceil(rOverview.XSize/2)), int(np.ceil(rOverview.YSize/2))) 
-    
-    return rOverview
 
    
 def computeEvaluationMask(maskDIR, resolution, level):
@@ -83,7 +36,7 @@ def computeEvaluationMask(maskDIR, resolution, level):
 #    
     
     
-    pixelarray=(imread_gdal_mask(maskDIR,level)>0)*255
+    pixelarray=(imread_gdal(maskDIR,level)>0)*255
 #    print(np.sum(pixelarray)/255)
     distance = nd.distance_transform_edt(255 - pixelarray)
     Threshold = 75/(resolution * pow(2, level) * 2) # 75µm is the equivalent size of 5 tumor cells
@@ -289,23 +242,26 @@ def makeGaussian(sig = 3, center=None):
 
 
 
-def froc_eval(g,t,sig,name,data_type):
-    
-    mask_folder = "..\\dataset\\"+ data_type +"_cam\\mask"
-    result_folder = "..\\results\\"+ name +"\\"+data_type
-    
-    result_file_list = []
-    result_file_list += [each for each in os.listdir(result_folder) if each.endswith('.tif')]
-    
-#    result_file_list= [result_file_list[i] for i in [1,0,20,43,61,66,81,99,102,111,10,71]]
-#    result_file_list= [result_file_list[i] for i in [1]]
-    
-#    if data_type=='valid':
-#        result_file_list= [result_file_list[i] for i in [2,0,5,7,9,11,13,15,17]]
-#    else:
-#        result_file_list= [result_file_list[i] for i in np.arange(0,110,3)]
+def froc_eval(g,t,sig,mask_folder,result_folder):
     
     
+    result_file_list=[]
+    mask_file_list=[]
+    for root, dirs, files in os.walk(result_folder):
+        for name in files:
+            if name.endswith(".tif"):
+                tmp=root+os.sep+name
+                result_file_list.append(tmp)
+                tmp=tmp.split(os.sep)
+                tmp=mask_folder+tmp[-1]
+                tmp=tmp.replce('.tif','_mask.tif')
+                mask_file_list.append(tmp)
+                
+                
+                
+                
+    
+    results_lvl=5
     EVALUATION_MASK_LEVEL = 5 # Image level at which the evaluation is done
     L0_RESOLUTION = 0.243 # pixel resolution at level 0
     
@@ -314,15 +270,18 @@ def froc_eval(g,t,sig,name,data_type):
     detection_summary = np.zeros((2, len(result_file_list)), dtype=np.object)
     
     caseNum = 0    
-    for case in result_file_list:
-        print(str(g)+'  '+str(t)+'  '+str(sig)+'  '+'Evaluating Performance on image:', case[0:-4])
+    for case,mask_name in zip(result_file_list,mask_file_list):
+        
+        print(str(g)+'  '+str(t)+'  '+str(sig)+'  '+'Evaluating Performance on image:', case)
+        
         sys.stdout.flush()
 #        csvDIR = os.path.join(result_folder, case)
 #        Probs, Xcorr, Ycorr = readCSVContent(csvDIR)
         
-        result_img_folder="..\\results\\"+ name +"\\" + data_type
-        r_n= os.path.join(result_img_folder, case[0:-4]) + '.tif'
-        res_img=imread_gdal_mask_small(r_n,EVALUATION_MASK_LEVEL-3)
+
+        
+        
+        res_img=imread_gdal(case,EVALUATION_MASK_LEVEL-results_lvl)
         
         
         
@@ -337,26 +296,7 @@ def froc_eval(g,t,sig,name,data_type):
         res_img[:,-r:]=0
         res_img[:,:r]=0
         
-#        res_0=res_img
-#        
-#        cont=1
-#        while cont:
-#            ind=np.argmax(res_img,axis=None)
-#            ind = np.unravel_index(ind, res_img.shape)
-#            v=res_0[ind[0],ind[1]]
-#            if v>t:
-#                Probs.append(v)
-#                Xcorr.append(ind[1])
-#                Ycorr.append(ind[0])
-#                rem=np.ones(np.shape(res_img),dtype=np.float32)
-#                di=makeGaussian(sig)
-#                rem[ind[0]-r:ind[0]-r+np.shape(di)[0],ind[1]-r:ind[1]-r+np.shape(di)[1]]=1-di
-#
-#                res_img=res_img*rem
-#                
-#            else:
-#                cont=0
-        
+
         
         
         tmp =peak_local_max(res_img, min_distance=int(sig), threshold_abs=t)
@@ -364,17 +304,13 @@ def froc_eval(g,t,sig,name,data_type):
         Xcorr=list(tmp[:,1])
         Probs=list(res_img[Ycorr,Xcorr])
         
-      
-#        plt.imshow(res_img)
-#        plt.plot(Xcorr, Ycorr,'*')
-    
-                
+  
         
 
-        is_tumor = case[0:5] == 'tumor'    
-        if (is_tumor):
-            maskDIR = os.path.join(mask_folder, case[0:-4]) + '_mask.tif'
-            evaluation_mask = computeEvaluationMask(maskDIR, L0_RESOLUTION, EVALUATION_MASK_LEVEL)
+        is_tumor =  'tumor_'  in case
+        
+        if (is_tumor):     
+            evaluation_mask = computeEvaluationMask(mask_name, L0_RESOLUTION, EVALUATION_MASK_LEVEL)
             ITC_labels = computeITCList(evaluation_mask, L0_RESOLUTION, EVALUATION_MASK_LEVEL)
             
 #            plt.figure()    
@@ -420,11 +356,17 @@ def froc_eval(g,t,sig,name,data_type):
 
 if __name__ == "__main__":
 
-    name='1s_no_pixel'
+    mask_folder_valid='/media/ubmi/DATA2/vicar/cam_dataset/test/mask'
+    result_folder_valid='/media/ubmi/DATA1/vicar/code/results/s2_pixel_baseinfsampler/results'
     
-    gs=np.linspace(3,50,4)
+    mask_folder_test='/media/ubmi/DATA2/vicar/cam_dataset/test/mask'
+    result_folder_test='/media/ubmi/DATA1/vicar/code/results/s2_pixel_baseinfsampler/results'
+    
+    
+    
+    gs=np.linspace(3,50,5)
     ts=[0.3]
-    sigs=np.linspace(30,150,4)
+    sigs=np.linspace(30,150,5)
     
 #    gs=[10]
 #    ts=[0.5]
@@ -450,7 +392,7 @@ if __name__ == "__main__":
                 tts[k,kk,kkk]=t
                 sigsigs[k,kk,kkk]=sig
                 
-                results,froc=froc_eval(g,t,sig,name,'valid')
+                results,froc=froc_eval(g,t,sig,mask_folder_valid,result_folder_valid)
                 
                 
                 results_FROC[k,kk,kkk]=froc
@@ -464,11 +406,18 @@ if __name__ == "__main__":
     t=tts[ind[0],ind[1],ind[2]]
     sig=sigsigs[ind[0],ind[1],ind[2]]    
         
-    results,froc=froc_eval(g,t,sig,name,'test')
+    results,froc=froc_eval(g,t,sig,mask_folder_valid,result_folder_valid)
     
-    np.save('../results/' +name+ '/results_froc.npy',froc)
-    np.save('../results/' +name+ '/results_froc_all.npy',results)
-    np.save('../results/' +name+ '/froc_valid.npy',results_FROC)                 
-    np.save('../results/' +name+ '/ggs.npy',ggs)     
-    np.save('../results/' +name+ '/tts.npy',tts) 
-    np.save('../results/' +name+ '/sigsigs.npy',sigsigs)  
+    
+    
+    np.save(result_folder_test+ os.sep + 'results_froc.npy',froc)
+    np.save(result_folder_test+ os.sep + 'results_froc_all.npy',results)
+    np.save(result_folder_test+ os.sep + 'froc_valid.npy',results_FROC)                 
+    np.save(result_folder_test+ os.sep + 'ggs.npy',ggs)     
+    np.save(result_folder_test+ os.sep + 'tts.npy',tts) 
+    np.save(result_folder_test+ os.sep + 'sigsigs.npy',sigsigs)  
+    
+    
+    
+    
+    

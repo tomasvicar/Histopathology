@@ -62,7 +62,8 @@ if __name__ == '__main__':
                 
     gen = inf_train_gen()
     
-    model=pixel_net.PixelNet(K=k0,kplus=k,input_size=3,gconv=gconv)
+#    model=pixel_net.PixelNet(K=k0,kplus=k,input_size=3,gconv=gconv)
+    model=torch.load('/media/ubmi/DATA1/vicar/code/results/s1_pixel_baseinfsampler/0.9665__00055500.pkl')
     model=model.cuda(0)
     
     optimizer = optim.Adam(model.parameters(),lr = init_lr ,betas= (0.9, 0.999),eps=1e-8,weight_decay=1e-8)
@@ -175,7 +176,13 @@ if __name__ == '__main__':
             plt.show()
         
         
-        
+            plt.plot(it_train,loss_train)
+            plt.plot(it_valid,loss_valid)
+            plt.savefig(save_dir +os.sep+ 'loss.png')
+            
+            plt.plot(it_train,acc_train)
+            plt.plot(it_valid,acc_valid)
+            plt.savefig(save_dir +os.sep+ 'acc.png')
         
         
         
