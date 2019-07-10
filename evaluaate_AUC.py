@@ -6,60 +6,22 @@ from sklearn.metrics import roc_curve
 import cv2
 import gdal
 from skimage.io import imread
+from utils.gdal_fcns import imread_gdal,getsize_gdal
 
 
-def imread_gdal(data_name,level):
-    
-    level=level-1
-    
-    gdalObj = gdal.Open(data_name)
-    
-
-    
-    rOverview = gdalObj.GetRasterBand (1)
-    gOverview = gdalObj.GetRasterBand (2)
-    bOverview = gdalObj.GetRasterBand (3)
-    if level>=0:
-        rOverview = rOverview.GetOverview(level)
-        gOverview = gOverview.GetOverview(level)
-        bOverview = bOverview.GetOverview(level)
-    rOverview = rOverview.ReadAsArray(0,0, rOverview.XSize, rOverview.YSize) 
-    gOverview = gOverview.ReadAsArray(0,0, gOverview.XSize, gOverview.YSize)  
-    bOverview = bOverview.ReadAsArray(0,0, bOverview.XSize, bOverview.YSize)  
-        
-    return np.stack((rOverview ,gOverview ,bOverview),axis=2)
-
-
-def imread_gdal_mask(data_name,level):
-    
-    level=level-1
-
-    gdalObj = gdal.Open(data_name)
-    
-
-    
-    rOverview = gdalObj.GetRasterBand (1)
-    if level>=0:
-        rOverview = rOverview.GetOverview(level)
-        
-    rOverview = rOverview.ReadAsArray(0,0, rOverview.XSize, rOverview.YSize) 
-    
-    return rOverview
-
-
-
-data_type='test'
-model_name='s1_dense_net_preatrained'
-data_path='E:/histolky_drazdany_data/lungs/dataset/'+ data_type  +'/data' 
-results_path=save_folder='../results/' +model_name  +'/' +data_type
-
+res_lvl=5
+fg_lvl=4
+auc_sampling_per=0.1
+results_path='/media/ubmi/DATA1/vicar/code/results/s2_pixel_baseinfsampler'
+data_path='/media/ubmi/DATA2/vicar/cam_dataset/test/data'
 
 
 file_names=[]
 for root, dirs, files in os.walk(data_path):
     for name in files:
         if name.endswith(".tif"):
-            file_names.append(root+'/'+name)
+            file_names.append(root+os.sep+name)
+            
 
 for_auc_res=[]
 for_auc_gt=[]
@@ -74,30 +36,29 @@ for img_filename in file_names:
     print(i,img_filename)
     
     fg_name=img_filename
-    fg_name=fg_name.replace('/data/','/fg/')
+    fg_name=fg_name.replace(os.sep+'data'+os.sep,os.sep+'fg'+os.sep)
     
     lbl_name=fg_name
-    lbl_name=lbl_name.replace('/fg/','/mask/')
-#    lbl_name=lbl_name.replace('/fg/','/mask_dil_lvl2_32/')
+    lbl_name=lbl_name.replace(os.sep+'fg'+os.sep,os.sep+'mask'+os.sep)
     lbl_name=lbl_name.replace('.tif','_mask.tif')
     
-    tmp=img_filename.split('/')
+    tmp=img_filename.split(os.sep)
     tmp=tmp[-1]
-    result_name=results_path +'/'+ tmp
+    result_name=results_path +os.sep+ tmp
     
     
-    lvl=4
-    auc_sampling_per=1
+
     
-    img=imread_gdal_mask(result_name,0)
-    data=imread_gdal(img_filename,lvl)
+    img=imread_gdal(result_name,0)
+    data=imread_gdal(img_filename,res_lvl)
     if '_tumor' in lbl_name:
-        lbl=imread_gdal_mask(lbl_name,lvl)
+        lbl=imread_gdal(lbl_name,res_lvl)
 #        lbl=imread_gdal_mask(lbl_name,lvl-2)
     else:
         lbl=np.zeros(np.shape(img))
     fg=imread(fg_name)
-    fg=cv2.resize(fg,None,fx=1/2, fy=1/2, interpolation = cv2.INTER_NEAREST)>0
+    s=2**(fg_lvl-res_lvl)
+    fg=cv2.resize(fg,None,fx=s, fy=s, interpolation = cv2.INTER_NEAREST)>0
     
     
     

@@ -15,9 +15,9 @@ from utils.training_function import l1_loss,l2_loss,dice_loss_logit,AdjustLearni
 
 
 
-iters=9999999
+iters=9999999999
 batch=16
-init_lr=0.001
+init_lr=0.01
 path_to_data_train='/media/ubmi/DATA2/vicar/cam_dataset/train/data'
 path_to_data_valid='/media/ubmi/DATA2/vicar/cam_dataset/valid/data'
 k0=16
@@ -25,7 +25,7 @@ k=8
 gconv=0
 lvl=1
 valid_freq=300 ##iters
-lr_step=50_000 ##iters
+lr_step=500_000/batch ##iters
 
 save_dir='../results/s1_pixel_baseinfsampler'
 
@@ -120,7 +120,7 @@ if __name__ == '__main__':
             
             loss_train.append(np.mean(losses))
             acc_train.append(np.mean(accs))
-            it_train.append(it)
+            it_train.append(it*batch)
             
             losses=[]
             accs=[]
@@ -147,7 +147,7 @@ if __name__ == '__main__':
                 
             loss_valid.append(np.mean(losses))
             acc_valid.append(np.mean(accs))
-            it_valid.append(it)
+            it_valid.append(it*batch)
             
             stop=adjustLerningRate.step(optimizer,it,loss_valid[-1])
             

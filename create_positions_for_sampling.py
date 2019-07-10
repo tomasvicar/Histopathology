@@ -24,8 +24,8 @@ border_to_clear=(2+int(np.ceil(patch_size_max/2/lbl_to_img_scale)))
 num_of_idx_in_one_file=100_000
 
 
-#path_to_data='/media/ubmi/DATA2/vicar/cam_dataset/train/data'
-path_to_data='/media/ubmi/DATA2/vicar/cam_dataset/valid/data'
+path_to_data='/media/ubmi/DATA2/vicar/cam_dataset/train/data'
+#path_to_data='/media/ubmi/DATA2/vicar/cam_dataset/valid/data'
 
 dataset='cam'
 #dataset='lungs'
@@ -119,9 +119,9 @@ for k,file_name in enumerate(file_names):
     for kk in range(num_of_files):
         kkk=kk*num_of_idx_in_one_file
         if kk==num_of_files-1:
-            tmp=[position_tisue[0][kkk:].astype(np.int32),position_tisue[1][kk:kk+num_of_idx_in_one_file].astype(np.int32)]
+            tmp=[position_tisue[0][kkk:].astype(np.int32),position_tisue[1][kkk:].astype(np.int32)]
         else:
-            tmp=[position_tisue[0][kkk:kkk+num_of_idx_in_one_file].astype(np.int32),position_tisue[1][kk:kk+num_of_idx_in_one_file].astype(np.int32)]
+            tmp=[position_tisue[0][kkk:kkk+num_of_idx_in_one_file].astype(np.int32),position_tisue[1][kkk:kkk+num_of_idx_in_one_file].astype(np.int32)]
 #        np.save(save_folder + '/' + 'idxs_tisue_'+ str(kk).zfill(6) +'.npy',tmp,allow_pickle=True)
         np.savez_compressed(save_folder + os.sep + 'idxs_tisue_'+ str(kk).zfill(6) +'.npz',tmp,allow_pickle=True)
         
@@ -129,9 +129,9 @@ for k,file_name in enumerate(file_names):
     for kk in range(num_of_files):
         kkk=kk*num_of_idx_in_one_file
         if kk==num_of_files-1:
-            tmp=[position_tumor[0][kkk:].astype(np.int32),position_tumor[1][kk:kk+num_of_idx_in_one_file].astype(np.int32)]
+            tmp=[position_tumor[0][kkk:].astype(np.int32),position_tumor[1][kkk:].astype(np.int32)]
         else:
-            tmp=[position_tumor[0][kkk:kkk+num_of_idx_in_one_file].astype(np.int32),position_tumor[1][kk:kk+num_of_idx_in_one_file].astype(np.int32)]
+            tmp=[position_tumor[0][kkk:kkk+num_of_idx_in_one_file].astype(np.int32),position_tumor[1][kkk:kkk+num_of_idx_in_one_file].astype(np.int32)]
 #        np.save(save_folder + '/' + 'idxs_tumor_'+ str(kk).zfill(6) +'.npy',tmp,allow_pickle=True)   
         np.savez_compressed(save_folder + os.sep + 'idxs_tumor_'+ str(kk).zfill(6) +'.npz',tmp,allow_pickle=True)  
         

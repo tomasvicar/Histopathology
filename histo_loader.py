@@ -91,9 +91,16 @@ class HistoDataset(data.Dataset):
             
         augmenters=[]    
         augmenters.append(augmenter.ToFloat())
-        augmenters.append(augmenter.RangeToRange((0,255),(-1,1)))
+        augmenters.append(augmenter.RangeToRange((0,255),(0,1)))
         if self.split=='train':
             augmenters.append(augmenter.Rot90Flip())
+            if torch.rand(1).numpy()[0]>0.1:
+                augmenters.append(augmenter.BrithnessContrastAugmenter(add=0.2,multipy=0.2))
+                augmenters.append(augmenter.ClipByValues((0,1)))
+                augmenters.append(augmenter.RGBColorAugmenter(dr=0.1,dg=0.1,db=0.1,mr=0.1,mg=0.1,mb=0.1,gr=0.1,gg=0.1,gb=0.1))
+                augmenters.append(augmenter.BlurSharpAugmenter((-0.1,0.1)))
+                augmenters.append(augmenter.ClipByValues((0,1)))
+        augmenters.append(augmenter.RangeToRange((0,1),(-1,1)))
         augmenters.append(augmenter.TorchFormat())
         
         img,mask=augmenter.augment_all(augmenters,[img],[mask])

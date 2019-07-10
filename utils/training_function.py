@@ -63,7 +63,7 @@ class AdjustLearningRate():
             self.best_loss_pos=iteration
             self.best_loss=loss
 #        
-        print(self.best_loss,loss)
+        print(self.best_loss,loss,self.best_loss_pos)
 #        
 #        print(str(self.batch*iteration-self.best_loss_pos) + '////' + str(self.lr_step))
         if  iteration-self.best_loss_pos>self.lr_step:

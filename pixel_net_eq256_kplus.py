@@ -108,10 +108,10 @@ class Conv2BnRelu(nn.Module):
         else:
             self.bn=nn.BatchNorm2d(out_size,momentum=0.1)
 
-        if self.gconv:
-            self.do=nn.Sequential(nn.Dropout(dov),nn.Dropout3d(dov))
-        else:
-            self.do=nn.Sequential(nn.Dropout(dov),nn.Dropout2d(dov))
+#        if self.gconv:
+#            self.do=nn.Sequential(nn.Dropout(dov),nn.Dropout3d(dov))
+#        else:
+#            self.do=nn.Sequential(nn.Dropout(dov),nn.Dropout2d(dov))
 
     def forward(self, x,dil=1,dense=0):
         
